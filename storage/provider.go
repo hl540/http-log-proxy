@@ -26,8 +26,8 @@ type HttpLogStorage interface {
 	AddHttpLog(ctx context.Context, log *HttpLogModel) error
 	// GetHttpLogByRequestId 通过RequestId获取log详情
 	GetHttpLogByRequestId(ctx context.Context, requestId string) (*HttpLogModel, error)
-	// GetHttpLogListByAppId 通过appid获取log列表，支持分页
-	GetHttpLogListByAppId(ctx context.Context, appId int64, key string, size int64, page int64) ([]*HttpLogModel, error)
+	// SearchHttpLogList 通过appid获取log列表，支持分页
+	SearchHttpLogList(ctx context.Context, appId int64, keyword string, size int64, page int64) (int64, []*HttpLogModel, error)
 }
 
 type Provider interface {

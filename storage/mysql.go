@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hl540/http-log-proxy/config"
 	"github.com/jmoiron/sqlx"
+	"strings"
 )
 
 func init() {
@@ -96,11 +97,33 @@ func (s *MySqlStorage) AddHttpLog(ctx context.Context, log *HttpLogModel) error 
 }
 
 func (s *MySqlStorage) GetHttpLogByRequestId(ctx context.Context, requestId string) (*HttpLogModel, error) {
-	//TODO implement me
-	panic("implement me")
+	selectSql := fmt.Sprintf("SELECT * FROM %s WHERE `request_id` = ?", HttpLogModelTableName)
+	var log HttpLogModel
+	err := s.db.GetContext(ctx, &log, selectSql, requestId)
+	return &log, err
 }
 
-func (s *MySqlStorage) GetHttpLogListByAppId(ctx context.Context, appId int64, key string, size int64, page int64) ([]*HttpLogModel, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *MySqlStorage) SearchHttpLogList(ctx context.Context, appId int64, keyword string, size int64, page int64) (int64, []*HttpLogModel, error) {
+	selectSql := fmt.Sprintf("SELECT * FROM %s WHERE `app_id` = ?", HttpLogModelTableName)
+	args := []any{appId}
+	if keyword != "" {
+		selectSql = fmt.Sprintf("%s AND `request_body` LIKE ?", selectSql)
+		selectSql = fmt.Sprintf("%s OR `response_body` LIKE ?", selectSql)
+		args = append(args, "%"+keyword+"%")
+		args = append(args, "%"+keyword+"%")
+	}
+
+	// 查询总数
+	var count int64
+	selectCountSql := strings.Replace(selectSql, "*", "COUNT(1)", 1)
+	err := s.db.GetContext(ctx, &count, selectCountSql, args...)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// 查询列表
+	list := make([]*HttpLogModel, 0, size)
+	selectSql = fmt.Sprintf("%s ORDER BY `create_at` DESC LIMIT %d, %d", selectSql, (page-1)*size, size)
+	err = s.db.SelectContext(ctx, &list, selectSql, args...)
+	return count, list, err
 }
