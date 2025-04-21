@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hl540/http-log-proxy/storage"
 	"github.com/julienschmidt/httprouter"
+	"html/template"
 	"net/http"
 )
 
@@ -41,4 +42,16 @@ func (h *Handler) Json(writer http.ResponseWriter, code int, obj interface{}) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(code)
 	_ = json.NewEncoder(writer).Encode(obj)
+}
+
+func (h *Handler) View(writer http.ResponseWriter, filename string, data any) {
+	tmpl, err := template.ParseFiles(filename)
+	if err != nil {
+		h.Error(writer, err)
+		return
+	}
+	if err := tmpl.Execute(writer, data); err != nil {
+		h.Error(writer, err)
+		return
+	}
 }
