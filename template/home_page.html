@@ -1,77 +1,209 @@
-<!doctype html>
-<html lang="zh-CN" class="h-100">
+<!DOCTYPE html>
+<html lang="zh">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
-    <link href="https://v5.bootcss.com/docs/examples/sticky-footer-navbar/sticky-footer-navbar.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>日志查看页面</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-
+        #appSelect {
+            max-width: 200px;
+        }
+        #logTable>tr>td {
+            overflow: auto;
+        }
     </style>
 </head>
-<body class="d-flex flex-column h-100">
+<body class="p-4">
 
-<header>
-    <!-- Fixed navbar -->
-    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">http-log-proxy</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
-                    aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarCollapse">
-                <ul class="navbar-nav me-auto mb-2 mb-md-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Link</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link disabled">Disabled</a>
-                    </li>
-                </ul>
-                <form class="d-flex" role="search">
-                    <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
-                    <button class="btn btn-outline-success" type="submit">Search</button>
-                </form>
+<!-- 头部筛选 + 创建按钮 -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex gap-3 flex-fill">
+        <select id="appSelect" class="form-select w-auto">
+            <option value="">选择 App</option>
+            {{ range .AppList }}
+            <option value="{{ .Key }}">{{ .Name }}</option>
+            {{ end }}
+        </select>
+
+        <input type="text" id="searchInput" class="form-control w-50" placeholder="模糊搜索关键词">
+        <button class="btn btn-primary" onclick="searchLogs()">搜索</button>
+    </div>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createAppModal">创建 App</button>
+</div>
+
+<!-- 表格展示日志 -->
+<table class="table table-bordered table-hover container-fluid">
+    <thead class="table-light">
+    <tr class="row">
+        <th class="col col-lg-2">时间</th>
+        <th class="col col-lg-3">请求id</th>
+        <th class="col col-lg-6">请求地址</th>
+        <th class="col col-lg-1">状态码</th>
+    </tr>
+    </thead>
+    <tbody id="logTable">
+    {{ range .LogList }}
+    <tr class="row">
+        <td class="col col-lg-2">{{ .CreateAt }}</td>
+        <td class="col col-lg-3">{{ .RequestMethod }} {{ .RequestId }}</td>
+        <td class="col col-lg-6">{{ .RequestUrl }}</td>
+        <td class="col col-lg-1">{{ .ResponseCode }}</td>
+    </tr>
+    {{ end }}
+    </tbody>
+</table>
+
+<!-- 模态框：日志详情 -->
+<div class="modal fade" id="logModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">日志详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- 左边 请求 -->
+                    <div class="col-md-6 border-end pe-3">
+                        <h6>请求信息</h6>
+                        <p><strong>路径：</strong><span id="reqPath"></span></p>
+                        <p><strong>Headers：</strong>
+                        <pre id="reqHeaders" class="bg-light p-2 rounded small"></pre>
+                        </p>
+                        <p><strong>Body：</strong>
+                        <pre id="reqBody" class="bg-light p-2 rounded small"></pre>
+                        </p>
+                    </div>
+                    <!-- 右边 响应 -->
+                    <div class="col-md-6 ps-3">
+                        <h6>响应信息</h6>
+                        <p><strong>状态码：</strong><span id="resStatus"></span></p>
+                        <p><strong>Headers：</strong>
+                        <pre id="resHeaders" class="bg-light p-2 rounded small"></pre>
+                        </p>
+                        <p><strong>Body：</strong>
+                        <pre id="resBody" class="bg-light p-2 rounded small"></pre>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
-    </nav>
-</header>
-
-<!-- Begin page content -->
-<main class="flex-shrink-0">
-
-
-    <ul>
-        {{range .AppList}}
-        <li>{{.Key}} - {{.Name}}</li>
-        {{end}}
-    </ul>
-
-    <h1>{{.LogTotal}}</h1>
-    <ul>
-        {{range .LogList}}
-        <li>{{.RequestId}} - {{.RequestUrl}}</li>
-        {{end}}
-    </ul>
-</main>
-
-<footer class="footer mt-auto py-3 bg-light">
-    <div class="container">
-        <span class="text-muted">Place sticky footer content here.</span>
     </div>
-</footer>
+</div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-/mhDoLbDldZc3qpsJHpLogda//BVZbgYuw6kof4u2FrCedxOtgRZDTHgHUhOCVim"
-        crossorigin="anonymous"></script>
+<!-- 模态框：创建 App -->
+<div class="modal fade" id="createAppModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="createAppForm" class="modal-content" onsubmit="return createApp(event)">
+            <div class="modal-header">
+                <h5 class="modal-title">创建新 App</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="newAppName" class="form-label">App 名称</label>
+                    <input type="text" id="newAppName" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">创建</button>
+            </div>
+        </form>
+    </div>
+</div>
 
+<script style="">
+    const logs = [
+        {
+            time: "2025-04-22 10:01",
+            app: "app1",
+            level: "INFO",
+            message: "用户登录成功",
+            request: {
+                path: "/api/login",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({username: "user1", password: "******"}, null, 2)
+            },
+            response: {
+                status: 200,
+                headers: {"Set-Cookie": "session=abc123;"},
+                body: JSON.stringify({token: "jwt-token-here"}, null, 2)
+            }
+        },
+        // ...更多日志
+    ];
 
+    function searchLogs() {
+        const selectedApp = document.getElementById("appSelect").value;
+        const keyword = document.getElementById("searchInput").value.toLowerCase();
+        const tbody = document.getElementById("logTable");
+        tbody.innerHTML = "";
+
+        const filtered = logs.filter(log => {
+            return (!selectedApp || log.app === selectedApp) &&
+                (!keyword || log.message.toLowerCase().includes(keyword));
+        });
+
+        filtered.forEach((log, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${log.time}</td>
+              <td>${log.app}</td>
+              <td>${log.level}</td>
+              <td>${log.message}</td>
+            `;
+            row.style.cursor = "pointer";
+            row.onclick = () => showDetail(log);
+            tbody.appendChild(row);
+        });
+    }
+
+    function showDetail(log) {
+        document.getElementById("reqPath").innerText = log.request.path || '';
+        document.getElementById("reqHeaders").innerText = JSON.stringify(log.request.headers || {}, null, 2);
+        document.getElementById("reqBody").innerText = log.request.body || '';
+
+        document.getElementById("resStatus").innerText = log.response.status || '';
+        document.getElementById("resHeaders").innerText = JSON.stringify(log.response.headers || {}, null, 2);
+        document.getElementById("resBody").innerText = log.response.body || '';
+
+        const modal = new bootstrap.Modal(document.getElementById("logModal"));
+        modal.show();
+    }
+
+    function createApp(event) {
+        event.preventDefault();
+        const input = document.getElementById("newAppName");
+        const appName = input.value.trim();
+        if (appName) {
+            const appSelect = document.getElementById("appSelect");
+
+            // 添加到下拉框
+            const option = document.createElement("option");
+            option.value = appName;
+            option.text = appName;
+            appSelect.appendChild(option);
+
+            // 选中新添加项
+            appSelect.value = appName;
+
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById("createAppModal"));
+            modal.hide();
+
+            // 清空输入框
+            input.value = "";
+
+            // 重新搜索（可选）
+            searchLogs();
+        }
+    }
+
+    // 初始加载
+    // searchLogs();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
