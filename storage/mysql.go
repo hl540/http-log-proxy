@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hl540/http-log-proxy/config"
 	"github.com/jmoiron/sqlx"
+	"strconv"
 	"strings"
 )
 
@@ -103,14 +104,26 @@ func (s *MySqlStorage) GetHttpLogByRequestId(ctx context.Context, requestId stri
 	return &log, err
 }
 
-func (s *MySqlStorage) SearchHttpLogList(ctx context.Context, appId int64, keyword string, size int64, page int64) (int64, []*HttpLogModel, error) {
+func (s *MySqlStorage) SearchHttpLogList(ctx context.Context, appId int64, param *SearchHttpLogListParam) (int64, []*HttpLogModel, error) {
 	selectSql := fmt.Sprintf("SELECT * FROM %s WHERE `app_id` = ?", HttpLogModelTableName)
 	args := []any{appId}
-	if keyword != "" {
+	if param.Keyword != "" {
 		selectSql = fmt.Sprintf("%s AND `request_body` LIKE ?", selectSql)
+		selectSql = fmt.Sprintf("%s OR `request_body` LIKE ?", selectSql)
 		selectSql = fmt.Sprintf("%s OR `response_body` LIKE ?", selectSql)
-		args = append(args, "%"+keyword+"%")
-		args = append(args, "%"+keyword+"%")
+		selectSql = fmt.Sprintf("%s OR `response_body` LIKE ?", selectSql)
+		args = append(args, "%"+param.Keyword+"%")
+		args = append(args, "%"+UnicodeForMySQLLike(param.Keyword)+"%")
+		args = append(args, "%"+param.Keyword+"%")
+		args = append(args, "%"+UnicodeForMySQLLike(param.Keyword)+"%")
+	}
+	if param.StartTime != 0 {
+		selectSql = fmt.Sprintf("%s AND `create_at` >= ?", selectSql)
+		args = append(args, param.StartTime)
+	}
+	if param.EndTime != 0 {
+		selectSql = fmt.Sprintf("%s AND `create_at` <= ?", selectSql)
+		args = append(args, param.EndTime)
 	}
 
 	// 查询总数
@@ -122,8 +135,13 @@ func (s *MySqlStorage) SearchHttpLogList(ctx context.Context, appId int64, keywo
 	}
 
 	// 查询列表
-	list := make([]*HttpLogModel, 0, size)
-	selectSql = fmt.Sprintf("%s ORDER BY `create_at` DESC LIMIT %d, %d", selectSql, (page-1)*size, size)
+	list := make([]*HttpLogModel, 0, param.Size)
+	selectSql = fmt.Sprintf("%s ORDER BY `create_at` DESC LIMIT %d, %d", selectSql, (param.Page-1)*param.Size, param.Size)
 	err = s.db.SelectContext(ctx, &list, selectSql, args...)
 	return count, list, err
+}
+
+func UnicodeForMySQLLike(s string) string {
+	ascii := strconv.QuoteToASCII(s) // 结果例如: "\u4e2d\u6587"
+	return ascii[1 : len(ascii)-1]   // 去掉前后引号
 }

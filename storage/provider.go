@@ -21,13 +21,21 @@ type AppStorage interface {
 	SearchAppList(ctx context.Context, name string, key string) ([]*AppModel, error)
 }
 
+type SearchHttpLogListParam struct {
+	Keyword   string
+	StartTime int64
+	EndTime   int64
+	Size      int64
+	Page      int64
+}
+
 type HttpLogStorage interface {
 	// AddHttpLog 新增http log
 	AddHttpLog(ctx context.Context, log *HttpLogModel) error
 	// GetHttpLogByRequestId 通过RequestId获取log详情
 	GetHttpLogByRequestId(ctx context.Context, requestId string) (*HttpLogModel, error)
 	// SearchHttpLogList 通过appid获取log列表，支持分页
-	SearchHttpLogList(ctx context.Context, appId int64, keyword string, size int64, page int64) (int64, []*HttpLogModel, error)
+	SearchHttpLogList(ctx context.Context, appId int64, param *SearchHttpLogListParam) (int64, []*HttpLogModel, error)
 }
 
 type Provider interface {

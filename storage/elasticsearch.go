@@ -56,7 +56,7 @@ func (s *ElasticsearchStorage) GetHttpLogByRequestId(ctx context.Context, reques
 	panic("implement me")
 }
 
-func (s *ElasticsearchStorage) SearchHttpLogList(ctx context.Context, appId int64, keyword string, size int64, page int64) (int64, []*HttpLogModel, error) {
+func (s *ElasticsearchStorage) SearchHttpLogList(ctx context.Context, appId int64, param *SearchHttpLogListParam) (int64, []*HttpLogModel, error) {
 	//TODO implement me
 	panic("implement me")
 }

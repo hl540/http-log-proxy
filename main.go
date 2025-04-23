@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
+	"github.com/gin-gonic/gin"
 	"github.com/hl540/http-log-proxy/config"
 	"github.com/hl540/http-log-proxy/internal/dashboard"
 	"github.com/hl540/http-log-proxy/internal/http_log_proxy"
 	"github.com/hl540/http-log-proxy/storage"
-	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
 )
@@ -42,9 +42,12 @@ func main() {
 	mux.Handle("/", httpLogProxy)
 
 	// 创建dashboard路由
-	router := httprouter.New()
-	dashboard.NewHandler(storageProvider).Register(router)
-	mux.Handle("/dashboard/", router)
+	dashboardApp := gin.Default()
+	dashboardApp.Delims("[[", "]]")
+	dashboardApp.LoadHTMLGlob("templates/*")
+
+	dashboard.NewHandler(storageProvider).Register(dashboardApp.RouterGroup)
+	mux.Handle("/dashboard/", dashboardApp)
 
 	log.Println("starting http server on http://127.0.0.1:" + port)
 
