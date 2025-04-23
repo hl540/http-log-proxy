@@ -7,6 +7,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"html/template"
 	"net/http"
+	"path/filepath"
 )
 
 type Handler struct {
@@ -45,7 +46,7 @@ func (h *Handler) Json(writer http.ResponseWriter, code int, obj interface{}) {
 }
 
 func (h *Handler) View(writer http.ResponseWriter, filename string, data any) {
-	tmpl, err := template.ParseFiles(filename)
+	tmpl, err := template.New(filepath.Base(filename)).Delims("[[", "]]").ParseFiles(filename)
 	if err != nil {
 		h.Error(writer, err)
 		return
