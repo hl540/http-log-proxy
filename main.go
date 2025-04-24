@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/gin-gonic/gin"
-	"github.com/hl540/http-log-proxy/config"
+	"github.com/hl540/http-log-proxy/configs"
 	"github.com/hl540/http-log-proxy/internal/dashboard"
 	"github.com/hl540/http-log-proxy/internal/http_log_proxy"
 	"github.com/hl540/http-log-proxy/storage"
@@ -24,7 +24,7 @@ func init() {
 
 func main() {
 	// 加载配置
-	conf, err := config.Load(configFile)
+	conf, err := configs.Load(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}

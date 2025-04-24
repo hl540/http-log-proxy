@@ -1,3 +1,5 @@
 Storage:
-  Type: local
-  Source: data.db
+  Type: elasticsearch
+  Source: http://localhost:9200
+#  Type: local
+#  Source: ./data.db

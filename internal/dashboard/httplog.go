@@ -3,7 +3,7 @@ package dashboard
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/hl540/http-log-proxy/form"
+	"github.com/hl540/http-log-proxy/forms"
 	"github.com/hl540/http-log-proxy/storage"
 	"net/http"
 	"time"
@@ -25,7 +25,7 @@ func (h *Handler) HttpLogInfoHandler(ctx *gin.Context) {
 }
 
 func (h *Handler) HttpLogListHandler(ctx *gin.Context) {
-	var req form.HttpLogListReq
+	var req forms.HttpLogListReq
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, err)
 		return
@@ -41,12 +41,12 @@ func (h *Handler) HttpLogListHandler(ctx *gin.Context) {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-	data := &form.HttpLogListResp{
+	data := &forms.HttpLogListResp{
 		Total: total,
-		Data:  make([]*form.HttpLogListRespDataItem, 0, len(list)),
+		Data:  make([]*forms.HttpLogListRespDataItem, 0, len(list)),
 	}
 	for _, item := range list {
-		data.Data = append(data.Data, &form.HttpLogListRespDataItem{
+		data.Data = append(data.Data, &forms.HttpLogListRespDataItem{
 			CreateAt:      time.Unix(item.CreateAt, 0).Format("2006-01-02 15:04:05"),
 			RequestId:     item.RequestId,
 			RequestUrl:    item.RequestUrl,

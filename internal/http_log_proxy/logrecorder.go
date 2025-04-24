@@ -84,8 +84,7 @@ func (r *LogRecorder) decodeResponseBody(body []byte, contentEncoding string) []
 // Flush 将日志持久化到存储
 func (r *LogRecorder) Flush(ctx context.Context) {
 	r.log.RequestId = ctx.Value(HttpLogProxyRequestId).(string)
-	r.log.AppId = ctx.Value(AppId).(int64)
-	r.log.AppKey = ctx.Value(AppKey).(string)
+	r.log.AppId = ctx.Value(AppId).(string)
 	r.log.CreateAt = time.Now().Unix()
 
 	err := r.StorageProvider.AddHttpLog(ctx, r.log)

@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"github.com/hl540/http-log-proxy/config"
+	"github.com/hl540/http-log-proxy/configs"
 	"github.com/jmoiron/sqlx"
 	"strconv"
 	"strings"
@@ -17,18 +17,18 @@ type MySqlStorage struct {
 	db *sqlx.DB
 }
 
-func (s *MySqlStorage) Init(conf *config.Storage) error {
+func (s *MySqlStorage) Init(conf *configs.Storage) error {
 	//TODO implement me
 	panic("implement me")
 }
 
 func (s *MySqlStorage) AddApp(ctx context.Context, app *AppModel) error {
-	insertSql := fmt.Sprintf("INSERT INTO %s (`key`, `name`, `target`, `create_at`, `update_at`) VALUES (?, ?, ?, ?, ?)", AppModelTableName)
-	_, err := s.db.ExecContext(ctx, insertSql, app.Key, app.Name, app.Target, app.CreateAt, app.UpdateAt)
+	insertSql := fmt.Sprintf("INSERT INTO %s (`id`, `name`, `target`, `create_at`, `update_at`) VALUES (?, ?, ?, ?, ?)", AppModelTableName)
+	_, err := s.db.ExecContext(ctx, insertSql, app.Id, app.Name, app.Target, app.CreateAt, app.UpdateAt)
 	return err
 }
 
-func (s *MySqlStorage) DelApp(ctx context.Context, id int64) error {
+func (s *MySqlStorage) DelApp(ctx context.Context, id string) error {
 	deleteSql := fmt.Sprintf("DELETE FROM %s WHERE `id` = ?", AppModelTableName)
 	_, err := s.db.ExecContext(ctx, deleteSql, id)
 	return err
@@ -40,7 +40,7 @@ func (s *MySqlStorage) UpdateApp(ctx context.Context, app *AppModel) error {
 	return err
 }
 
-func (s *MySqlStorage) GetAppById(ctx context.Context, id int64) (*AppModel, error) {
+func (s *MySqlStorage) GetAppById(ctx context.Context, id string) (*AppModel, error) {
 	selectSql := fmt.Sprintf("SELECT * FROM %s WHERE `id` = ? LIMIT 1", AppModelTableName)
 	var app AppModel
 	err := s.db.GetContext(ctx, &app, selectSql, id)
@@ -50,26 +50,16 @@ func (s *MySqlStorage) GetAppById(ctx context.Context, id int64) (*AppModel, err
 	return &app, nil
 }
 
-func (s *MySqlStorage) GetAppByKey(ctx context.Context, key string) (*AppModel, error) {
-	selectSql := fmt.Sprintf("SELECT * FROM %s WHERE `key` = ? LIMIT 1", AppModelTableName)
-	var app AppModel
-	err := s.db.GetContext(ctx, &app, selectSql, key)
-	if err != nil {
-		return nil, err
-	}
-	return &app, nil
-}
-
-func (s *MySqlStorage) SearchAppList(ctx context.Context, name string, key string) ([]*AppModel, error) {
+func (s *MySqlStorage) SearchAppList(ctx context.Context, name string, id string) ([]*AppModel, error) {
 	selectSql := fmt.Sprintf("SELECT * FROM %s WHERE 1 = 1", AppModelTableName)
 	var args []any
 	if name != "" {
 		selectSql = fmt.Sprintf("%s AND `name` LIKE ?", selectSql)
 		args = append(args, "%"+name+"%")
 	}
-	if key != "" {
-		selectSql = fmt.Sprintf("%s AND `key` LIKE ?", selectSql)
-		args = append(args, "%"+key+"%")
+	if id != "" {
+		selectSql = fmt.Sprintf("%s AND `id` LIKE ?", selectSql)
+		args = append(args, "%"+id+"%")
 	}
 	var apps []*AppModel
 	err := s.db.SelectContext(ctx, &apps, selectSql, args...)
@@ -80,11 +70,10 @@ func (s *MySqlStorage) SearchAppList(ctx context.Context, name string, key strin
 }
 
 func (s *MySqlStorage) AddHttpLog(ctx context.Context, log *HttpLogModel) error {
-	insertSql := fmt.Sprintf("INSERT INTO %s (`request_id`, `app_id`, `app_key`, `request_url`, `request_method`, `request_header`, `request_body`, `response_code`, `response_header`, `response_body`, `create_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", HttpLogModelTableName)
+	insertSql := fmt.Sprintf("INSERT INTO %s (`request_id`, `app_id`, `request_url`, `request_method`, `request_header`, `request_body`, `response_code`, `response_header`, `response_body`, `create_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", HttpLogModelTableName)
 	_, err := s.db.ExecContext(ctx, insertSql,
 		log.RequestId,
 		log.AppId,
-		log.AppKey,
 		log.RequestUrl,
 		log.RequestMethod,
 		log.RequestHeader,
@@ -104,7 +93,7 @@ func (s *MySqlStorage) GetHttpLogByRequestId(ctx context.Context, requestId stri
 	return &log, err
 }
 
-func (s *MySqlStorage) SearchHttpLogList(ctx context.Context, appId int64, param *SearchHttpLogListParam) (int64, []*HttpLogModel, error) {
+func (s *MySqlStorage) SearchHttpLogList(ctx context.Context, appId string, param *SearchHttpLogListParam) (int64, []*HttpLogModel, error) {
 	selectSql := fmt.Sprintf("SELECT * FROM %s WHERE `app_id` = ?", HttpLogModelTableName)
 	args := []any{appId}
 	if param.Keyword != "" {

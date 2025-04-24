@@ -17,6 +17,7 @@ func (h *Handler) Register(router gin.RouterGroup) {
 	router.GET("/dashboard/home", h.HomePageHandler)
 	router.POST("/dashboard/app/list", h.AppListHandler)
 	router.POST("/dashboard/app/new", h.NewAppHandler)
+	router.POST("/dashboard/app/del/:app_id", h.DelAppHandler)
 	router.GET("/dashboard/http_log/:request_id", h.HttpLogInfoHandler)
 	router.POST("/dashboard/http_log/list", h.HttpLogListHandler)
 }

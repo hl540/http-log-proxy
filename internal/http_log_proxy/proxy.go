@@ -61,7 +61,7 @@ func (s *HttpLogProxy) parseContext(r *http.Request) error {
 		return errors.New("missing application flag")
 	}
 
-	appInfo, err := s.StorageProvider.GetAppByKey(r.Context(), parts[0])
+	appInfo, err := s.StorageProvider.GetAppById(r.Context(), parts[0])
 	if err != nil {
 		return fmt.Errorf("invalid application flag: %s", parts[0])
 	}
@@ -69,7 +69,6 @@ func (s *HttpLogProxy) parseContext(r *http.Request) error {
 	requestId := uuid.NewString()
 	r.Header.Set(HttpLogProxyRequestId, requestId)
 	ctx := context.WithValue(r.Context(), AppId, appInfo.Id)
-	ctx = context.WithValue(ctx, AppKey, appInfo.Key)
 	ctx = context.WithValue(ctx, AppTarget, appInfo.Target)
 	ctx = context.WithValue(ctx, HttpLogProxyRequestId, requestId)
 	*r = *r.WithContext(ctx)
@@ -80,12 +79,12 @@ func (s *HttpLogProxy) parseContext(r *http.Request) error {
 func (s *HttpLogProxy) RewriteFunc(logRecorder *LogRecorder) func(*httputil.ProxyRequest) {
 	return func(req *httputil.ProxyRequest) {
 		target := req.In.Context().Value(AppTarget).(string)
-		appKey := req.In.Context().Value(AppKey).(string)
+		appId := req.In.Context().Value(AppId).(string)
 
 		parse, _ := url.Parse(target)
 		req.SetXForwarded()
 		req.SetURL(parse)
-		req.Out.URL.Path = strings.ReplaceAll(req.Out.URL.Path, "/"+appKey, "")
+		req.Out.URL.Path = strings.ReplaceAll(req.Out.URL.Path, "/"+appId, "")
 
 		log.Printf("%s => %s", req.In.URL.String(), req.Out.URL.String())
 		logRecorder.WriteRequest(req.Out)

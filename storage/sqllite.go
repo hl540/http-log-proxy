@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/hl540/http-log-proxy/config"
+	"github.com/hl540/http-log-proxy/configs"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -16,7 +16,7 @@ type SQLiteStorage struct {
 	*MySqlStorage
 }
 
-func (s *SQLiteStorage) Init(conf *config.Storage) error {
+func (s *SQLiteStorage) Init(conf *configs.Storage) error {
 	db, err := sqlx.Open("sqlite3", conf.Source)
 	if err != nil {
 		return fmt.Errorf("sql.Open: %s", err)
