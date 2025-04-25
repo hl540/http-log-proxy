@@ -22,6 +22,12 @@ type NewAppReq struct {
 	Target string `form:"target" binding:"required"`
 }
 
+type EditAppReq struct {
+	Id     string `json:"id"`
+	Name   string `form:"name" binding:"required,max=50"`
+	Target string `form:"target" binding:"required"`
+}
+
 type NewAppResp struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`

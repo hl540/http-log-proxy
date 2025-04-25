@@ -39,7 +39,14 @@ func (s *ElasticsearchStorage) AddApp(ctx context.Context, app *AppModel) error 
 
 func (s *ElasticsearchStorage) DelApp(ctx context.Context, id string) error {
 	query := elastic.NewMatchQuery("id", id)
-	_, err := s.es.DeleteByQuery().Index(AppModelTableName).Query(query).Size(1).Refresh("true").Do(ctx)
+	searchResult, err := s.es.Search().Index(AppModelTableName).Query(query).Size(1).Do(ctx)
+	if err != nil {
+		return err
+	}
+	if searchResult.TotalHits() == 0 {
+		return fmt.Errorf("app not found")
+	}
+	_, err = s.es.Delete().Index(AppModelTableName).Id(searchResult.Hits.Hits[0].Id).Refresh("true").Do(ctx)
 	if err != nil {
 		return err
 	}
@@ -47,8 +54,20 @@ func (s *ElasticsearchStorage) DelApp(ctx context.Context, id string) error {
 }
 
 func (s *ElasticsearchStorage) UpdateApp(ctx context.Context, app *AppModel) error {
-	//TODO implement me
-	panic("implement me")
+	query := elastic.NewMatchQuery("id", app.Id)
+	searchResult, err := s.es.Search().Index(AppModelTableName).Query(query).Size(1).Do(ctx)
+	if err != nil {
+		return err
+	}
+	if searchResult.TotalHits() == 0 {
+		return fmt.Errorf("app not found")
+	}
+
+	_, err = s.es.Update().Index(AppModelTableName).Id(searchResult.Hits.Hits[0].Id).Doc(app).Refresh("true").Do(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *ElasticsearchStorage) GetAppById(ctx context.Context, id string) (*AppModel, error) {

@@ -99,17 +99,17 @@
                     align="right">
             </el-date-picker>
             <el-input v-model="searchText" clearable placeholder="搜索内容" style="width: 200px;"></el-input>
-            <el-button type="primary" @click="onSearch">搜索</el-button>
+            <el-button type="primary" @click="searchLogList">搜索</el-button>
         </div>
         <div class="form-inline" style="padding-left: 10px;">
             <el-button type="primary" @click="openAppList">App列表</el-button>
-            <el-button type="primary" @click="dialogVisible = true">新增App</el-button>
+            <el-button type="primary" @click="newAppDialogVisible = true">新增App</el-button>
         </div>
     </div>
 
     <!--  日志列表  -->
     <div class="log-table">
-        <el-table :data="logs" height="100%" style="width: 100%;" @row-click="handleRowClick" v-if="logs.length">
+        <el-table :data="logs" height="100%" style="width: 100%;" @row-click="loadLogDetail" v-if="logs.length">
             <el-table-column prop="create_at" label="请求时间" width="180"></el-table-column>
             <el-table-column prop="request_id" label="请求ID" width="300"></el-table-column>
             <el-table-column prop="request_url" label="目标网站"></el-table-column>
@@ -139,18 +139,33 @@
     </div>
 
     <!--  新增app弹窗  -->
-    <el-dialog title="新增App" :visible.sync="dialogVisible">
-        <el-form :model="newApp">
+    <el-dialog title="新增App" :visible.sync="newAppDialogVisible">
+        <el-form :model="newAppModel">
             <el-form-item label="App名称">
-                <el-input v-model="newApp.name" clearable></el-input>
+                <el-input v-model="newAppModel.name" clearable></el-input>
             </el-form-item>
             <el-form-item label="目标网站">
-                <el-input v-model="newApp.target" clearable></el-input>
+                <el-input v-model="newAppModel.target" clearable></el-input>
             </el-form-item>
         </el-form>
         <div slot="footer" class="dialog-footer">
-            <el-button @click="dialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="addApp">提交</el-button>
+            <el-button @click="newAppDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="newApp">提交</el-button>
+        </div>
+    </el-dialog>
+    <!--  新增app弹窗  -->
+    <el-dialog title="编辑App" :visible.sync="editAppDialogVisible">
+        <el-form :model="editAppModel">
+            <el-form-item label="App名称">
+                <el-input v-model="editAppModel.name" clearable></el-input>
+            </el-form-item>
+            <el-form-item label="目标网站">
+                <el-input v-model="editAppModel.target" clearable></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="editAppDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="editApp">提交</el-button>
         </div>
     </el-dialog>
 
@@ -159,7 +174,7 @@
         <div class="form-inline">
             <el-input v-model="appFilter.name" clearable placeholder="按名称搜索"></el-input>
             <el-input v-model="appFilter.id" clearable placeholder="按id搜索"></el-input>
-            <el-button @click="fetchAppList" type="primary">搜索</el-button>
+            <el-button @click="loadAppList" type="primary">搜索</el-button>
         </div>
         <el-table :data="appList" height="100%" style="width: 100%; max-height: 300px; overflow-y: auto;">
             <el-table-column prop="name" label="App名称"></el-table-column>
@@ -167,25 +182,25 @@
             <el-table-column prop="target" label="目标网站"></el-table-column>
             <el-table-column prop="target" label="操作">
                 <template slot-scope="scope">
-                    <el-button type="primary" icon="el-icon-edit"></el-button>
-
-                    <el-popconfirm
-                            confirm-button-text='确定'
-                            cancel-button-text='取消'
-                            icon="el-icon-info"
-                            icon-color="red"
-                            :title="'确定删除'+scope.row.name+'吗？'"
-                            @confirm="delApp(scope.row)"
-                    >
-                        <el-button type="danger" icon="el-icon-delete" slot="reference"></el-button>
-                    </el-popconfirm>
+                    <div class="form-inline">
+                        <el-button type="primary" icon="el-icon-edit" @click="openEditApp(scope.row)"></el-button>
+                        <el-popconfirm
+                                confirm-button-text='确定'
+                                cancel-button-text='取消'
+                                icon="el-icon-info"
+                                icon-color="red"
+                                :title="'确定删除'+scope.row.name+'吗？'"
+                                @confirm="delApp(scope.row)">
+                            <el-button type="danger" icon="el-icon-delete" slot="reference"></el-button>
+                        </el-popconfirm>
+                    </div>
                 </template>
             </el-table-column>
         </el-table>
     </el-dialog>
 
     <!--  日志详情弹窗  -->
-    <el-dialog title="日志详情" :visible.sync="detailVisible" width="70%">
+    <el-dialog title="日志详情" :visible.sync="logDetailDialogVisible" width="70%">
         <div class="dialog-content-scrollable">
             <div class="log-detail-section">
                 <h4>请求信息</h4>
@@ -228,24 +243,26 @@
         data() {
             return {
                 selectedAppId: '',// 当前搜索的appid
-                appList: [],// app列表
-                appFilter: {name: '', id: ''},// app列表搜索项
                 dateRange: [],// 日志时间范围搜索项
                 searchText: '',// 日志模糊查询项
+                appFilter: {name: '', id: ''},// app列表搜索项
+                appList: [],// app列表
                 logs: [],// 日志列表
                 total: 0,// 日志总数
                 page: 1,// 默认页码
                 pageSize: 15,// 分页数量
-                dialogVisible: false,// 现在app弹窗状态
+                newAppModel: {name: '', target: ''},// 现在app数据
+                editAppModel: {id: '', name: '', target: ''},// 现在app数据
+                logDetail: {},// 日志详情数据
+                logDetailDialogVisible: false,// 日志详情弹窗
                 appListDialogVisible: false,// app列表弹窗
-                newApp: {name: '', target: ''},// 现在app数据
-                detailVisible: false,// 日志详情弹窗
-                logDetail: {}// 日志详情数据
+                newAppDialogVisible: false,// 新增app弹窗状态
+                editAppDialogVisible: false,// 编辑app弹窗状态
             }
         },
         async mounted() {
             // 加载app列表
-            await this.fetchAppList();
+            await this.loadAppList();
 
             // 获取预选appid
             const params = new URLSearchParams(window.location.search);
@@ -254,12 +271,12 @@
             // 发起查询
             if (selectedApp) {
                 this.selectedAppId = selectedApp.id;
-                this.onSearch();
+                this.searchLogList();
             }
         },
         methods: {
             // 日志搜索
-            async onSearch() {
+            async searchLogList() {
                 if (!this.selectedAppId) return;
                 const [startTime, endTime] = this.dateRange || [];
                 res = await axios.post('/dashboard/http_log/list', {
@@ -276,35 +293,50 @@
             // 分页
             async handlePageChange(newPage) {
                 this.page = newPage;
-                await this.onSearch();
+                await this.searchLogList();
             },
-            // 新增挨批评
-            async addApp() {
-                let res = await axios.post('/dashboard/app/new', this.newApp);
-                this.dialogVisible = false;
-                this.newApp = {name: '', target: ''};
-                this.fetchAppList();
+            // 新增app
+            async newApp() {
+                let res = await axios.post('/dashboard/app/new', this.newAppModel);
+                this.newAppDialogVisible = false;
+                this.newAppModel = {name: '', target: ''};
+                this.loadAppList();
             },
             // 删除app
             async delApp(row) {
                 await axios.post('/dashboard/app/del/' + row.id)
-                this.fetchAppList()
+                this.loadAppList()
             },
             // 日志详情
-            async handleRowClick(row) {
+            async loadLogDetail(row) {
                 let res = await axios.get(`/dashboard/http_log/${row.request_id}`);
                 this.logDetail = res.data;
-                this.detailVisible = true;
+                this.logDetailDialogVisible = true;
             },
             // 获取app列表
-            async fetchAppList() {
+            async loadAppList() {
                 res = await axios.post('/dashboard/app/list', this.appFilter);
                 this.appList = res.data.data || [];
             },
             // app列表弹窗
             async openAppList() {
-                await this.fetchAppList();
+                await this.loadAppList();
                 this.appListDialogVisible = true;
+            },
+            // 打开编辑app弹窗
+            async openEditApp(row) {
+                console.log(row);
+                this.editAppModel.id = row.id;
+                this.editAppModel.name = row.name;
+                this.editAppModel.target = row.target;
+                this.editAppDialogVisible = true;
+            },
+            // 编辑app
+            async editApp() {
+                await axios.post('/dashboard/app/edit', this.editAppModel)
+                this.editAppModel = {id: '', name: '', target: ''}
+                this.loadAppList()
+                this.editAppDialogVisible = false;
             },
             formatJson(raw) {
                 if (!raw) return '';

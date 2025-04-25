@@ -4,7 +4,6 @@ go 1.22.5
 
 require (
 	github.com/andybalholm/brotli v1.1.1
-	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0

@@ -92,3 +92,22 @@ func (h *Handler) DelAppHandler(ctx *gin.Context) {
 		"count": 1,
 	})
 }
+
+func (h *Handler) EditAppHandler(ctx *gin.Context) {
+	var req forms.EditAppReq
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, err)
+	}
+	appInfo, err := h.StorageProvider.GetAppById(ctx, req.Id)
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
+	}
+	appInfo.Name = req.Name
+	appInfo.Target = req.Target
+	appInfo.UpdateAt = time.Now().Unix()
+	err = h.StorageProvider.UpdateApp(ctx, appInfo)
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
+	}
+	ctx.JSON(http.StatusOK, gin.H{})
+}
