@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/hl540/http-log-proxy/storage"
-	"log"
+	"github.com/hl540/http-log-proxy/tools/log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -45,7 +45,7 @@ func (s *HttpLogProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxyHandler.ModifyResponse = s.ModifyResponseFunc(logRecorder)
 
 	proxyHandler.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("proxy error: %v", err)
+		log.WithContext(r.Context()).Infof("proxy error: %v", err)
 		http.Error(w, "proxy error: "+err.Error(), http.StatusBadGateway)
 	}
 
@@ -82,11 +82,12 @@ func (s *HttpLogProxy) RewriteFunc(logRecorder *LogRecorder) func(*httputil.Prox
 		appId := req.In.Context().Value(AppId).(string)
 
 		parse, _ := url.Parse(target)
-		req.SetXForwarded()
+		//req.SetXForwarded()
 		req.SetURL(parse)
 		req.Out.URL.Path = strings.ReplaceAll(req.Out.URL.Path, "/"+appId, "")
+		req.Out.Header.Set("Referer", target)
 
-		log.Printf("%s => %s", req.In.URL.String(), req.Out.URL.String())
+		log.WithContext(req.In.Context()).Infof("%s => %s", req.In.URL.String(), req.Out.URL.String())
 		logRecorder.WriteRequest(req.Out)
 	}
 }

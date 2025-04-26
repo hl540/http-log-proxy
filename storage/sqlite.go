@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"context"
+	_ "embed"
 	"fmt"
 	"github.com/hl540/http-log-proxy/configs"
 	"github.com/jmoiron/sqlx"
@@ -27,6 +29,27 @@ func (s *SQLiteStorage) Init(conf *configs.Storage) error {
 	s.db = db
 	s.MySqlStorage = &MySqlStorage{
 		db: s.db,
+	}
+	return nil
+}
+
+//go:embed sqlite_init.sql
+var sqliteInitSql string
+
+func (s *SQLiteStorage) Setup(ctx context.Context) error {
+	query := fmt.Sprint("SELECT COUNT(*) FROM sqlite_master WHERE `type` = 'table' AND `name` = ? ")
+	var count int
+	err := s.db.GetContext(ctx, &count, query, AppModelTableName)
+	if err != nil {
+		return fmt.Errorf("query table exists: %s", err)
+	}
+	if count > 0 {
+		return nil
+	}
+
+	_, err = s.db.ExecContext(ctx, sqliteInitSql)
+	if err != nil {
+		return fmt.Errorf("sqlite init: %s", err)
 	}
 	return nil
 }

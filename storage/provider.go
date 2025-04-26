@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hl540/http-log-proxy/configs"
+	"github.com/hl540/http-log-proxy/tools/log"
 )
 
 type AppStorage interface {
@@ -37,7 +38,10 @@ type HttpLogStorage interface {
 }
 
 type Provider interface {
+	// Init 初始化连接
 	Init(conf *configs.Storage) error
+	// Setup 初始化结构
+	Setup(ctx context.Context) error
 	AppStorage
 	HttpLogStorage
 }
@@ -55,6 +59,9 @@ func Load(conf *configs.Config) (Provider, error) {
 	}
 	if err := provider.Init(conf.Storage); err != nil {
 		return nil, err
+	}
+	if err := provider.Setup(context.Background()); err != nil {
+		log.WithContext(context.Background()).Debug(err.Error())
 	}
 	return provider, nil
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"github.com/hl540/http-log-proxy/configs"
 	"github.com/jmoiron/sqlx"
@@ -20,6 +21,27 @@ type MySqlStorage struct {
 func (s *MySqlStorage) Init(conf *configs.Storage) error {
 	//TODO implement me
 	panic("implement me")
+}
+
+//go:embed mysql_init.sql
+var mysqlInitSql string
+
+func (s *MySqlStorage) Setup(ctx context.Context) error {
+	query := fmt.Sprintf("SELECT COUNT(*) FROM information_schema.tables WHERE `table_schema` = DATABASE() AND `table_name` = ?")
+	var count int
+	err := s.db.GetContext(ctx, &count, query, AppModelTableName)
+	if err != nil {
+		return fmt.Errorf("query table exists: %s", err)
+	}
+	if count > 0 {
+		return nil
+	}
+
+	_, err = s.db.ExecContext(ctx, mysqlInitSql)
+	if err != nil {
+		return fmt.Errorf("mysql init: %s", err)
+	}
+	return nil
 }
 
 func (s *MySqlStorage) AddApp(ctx context.Context, app *AppModel) error {

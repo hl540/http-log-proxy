@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"github.com/hl540/http-log-proxy/configs"
@@ -26,6 +27,33 @@ func (s *ElasticsearchStorage) Init(conf *configs.Storage) error {
 		return fmt.Errorf("elasticsearch.NewClient: %s", err)
 	}
 	s.es = client
+	return nil
+}
+
+//go:embed elasticsearch_http_log_init.json
+var elasticsearchHttpLogMapping string
+
+//go:embed elasticsearch_app_init.json
+var elasticsearchAppMapping string
+
+func (s *ElasticsearchStorage) Setup(ctx context.Context) error {
+	indexMappings := map[string]string{
+		AppModelTableName:     elasticsearchAppMapping,
+		HttpLogModelTableName: elasticsearchHttpLogMapping,
+	}
+	for indexName, mapping := range indexMappings {
+		exists, err := s.es.IndexExists(indexName).Do(ctx)
+		if err != nil {
+			return fmt.Errorf("elasticsearch check %s index exists: %s", indexName, err)
+		}
+		if exists {
+			continue
+		}
+		_, err = s.es.CreateIndex(indexName).BodyString(mapping).Do(ctx)
+		if err != nil {
+			return fmt.Errorf("elasticsearch create %s index: %s", indexName, err)
+		}
+	}
 	return nil
 }
 
@@ -148,10 +176,13 @@ func (s *ElasticsearchStorage) SearchHttpLogList(ctx context.Context, appId stri
 	}
 	query.Filter(createAtRange)
 	if param.Keyword != "" {
-		query.Must(elastic.NewBoolQuery().Should(
-			elastic.NewMatchPhraseQuery("request_body", param.Keyword),
-			elastic.NewMatchPhraseQuery("response_body", param.Keyword),
-		))
+		queryString := elastic.NewQueryStringQuery(param.Keyword).
+			DefaultOperator("AND").
+			Escape(true).
+			Field("request_id").
+			Field("request_body").
+			Field("response_body")
+		query.Filter(queryString)
 	}
 
 	searchResult, err := s.es.Search().

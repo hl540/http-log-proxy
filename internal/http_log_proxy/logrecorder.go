@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"github.com/andybalholm/brotli"
 	"github.com/hl540/http-log-proxy/storage"
+	"github.com/hl540/http-log-proxy/tools/log"
 	"io"
-	"log"
 	"net/http"
 	"time"
 )
@@ -89,7 +89,7 @@ func (r *LogRecorder) Flush(ctx context.Context) {
 
 	err := r.StorageProvider.AddHttpLog(ctx, r.log)
 	if err != nil {
-		log.Println("Error adding http log:", err)
+		log.WithContext(ctx).Infof("Error adding http log:%v", err)
 	}
 }
 
