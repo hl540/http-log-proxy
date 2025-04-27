@@ -123,7 +123,14 @@ func (s *ElasticsearchStorage) SearchAppList(ctx context.Context, name string, i
 	if id != "" {
 		query.Must(elastic.NewWildcardQuery("id", "*"+id+"*"))
 	}
-	searchResult, err := s.es.Search().Index(AppModelTableName).Query(query).Do(ctx)
+	searchResult, err := s.es.Search().
+		Index(AppModelTableName).
+		Query(query).
+		SortBy(
+			elastic.NewFieldSort("create_at").Desc(),
+			elastic.NewFieldSort("update_at").Desc(),
+		).
+		Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +172,7 @@ func (s *ElasticsearchStorage) GetHttpLogByRequestId(ctx context.Context, reques
 }
 
 func (s *ElasticsearchStorage) SearchHttpLogList(ctx context.Context, appId string, param *SearchHttpLogListParam) (int64, []*HttpLogModel, error) {
-	query := elastic.NewBoolQuery().Filter(elastic.NewMatchQuery("app_id", appId))
+	query := elastic.NewBoolQuery().Filter(elastic.NewTermQuery("app_id", appId))
 
 	createAtRange := elastic.NewRangeQuery("create_at")
 	if param.StartTime != 0 {
@@ -188,6 +195,7 @@ func (s *ElasticsearchStorage) SearchHttpLogList(ctx context.Context, appId stri
 	searchResult, err := s.es.Search().
 		Index(HttpLogModelTableName).
 		Query(query).From(int((param.Page - 1) * param.Size)).
+		SortBy(elastic.NewFieldSort("create_at").Desc()).
 		Size(int(param.Size)).
 		Do(ctx)
 	if err != nil {
